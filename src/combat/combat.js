@@ -2,7 +2,17 @@
  * src/combat/combat.js — 유닛 소환/조합/도박/각성/업그레이드 및 몬스터 이동·전투·상성 데미지 엔진
  */
 import * as THREE from 'three';
-import { BOARD, GAMBLES, RULES, SUMMON_ODDS, upgradeCost, upgradeMultiplier, WAYPOINTS } from '../data/config.js';
+import {
+  BOARD,
+  GAMBLES,
+  MISSIONS,
+  RULES,
+  SUMMON_ODDS,
+  TARGET_MODES,
+  upgradeCost,
+  upgradeMultiplier,
+  WAYPOINTS,
+} from '../data/config.js';
 import { getUnitDef, TIERS, TYPE_KEYS, TYPES } from '../data/units.js';
 import { getBountySpec, getWaveSpec } from '../data/waves.js';
 import { recordUnitUnlock, saveProgress } from '../core/progress.js';
@@ -58,6 +68,7 @@ export function createUnitOnTile(type, tier, col, row, reason = 'summon') {
     totalDmg: 0,
     recoil: 0,
     spawnBounce: 1.0,
+    targetMode: 'smart',
     visual,
   };
   G.units.push(unit);
@@ -82,8 +93,58 @@ export function createUnitOnTile(type, tier, col, row, reason = 'summon') {
     _uiHooks.toast(`📖 도감 신규 등록: [${tInfo.name}] ${def.name}`, 'good');
   }
 
+  checkMissions();
   _uiHooks.refresh();
   return unit;
+}
+
+/**
+ * 인게임 전술 미션 6종 달성 여부 검사 및 즉시 보상 지급
+ */
+export function checkMissions() {
+  if (!G.missionsDone) G.missionsDone = {};
+  for (const m of MISSIONS) {
+    if (G.missionsDone[m.id]) continue;
+    let ok = false;
+    if (m.id === 'trinity') {
+      ok =
+        G.units.some((u) => u.type === 'striker') &&
+        G.units.some((u) => u.type === 'destroyer') &&
+        G.units.some((u) => u.type === 'arcane');
+    } else if (m.id === 'epic') {
+      ok = G.units.some((u) => u.tier >= 3);
+    } else if (m.id === 'unique') {
+      ok = G.units.some((u) => u.tier >= 4);
+    } else if (m.id === 'legend') {
+      ok = G.units.some((u) => u.tier >= 5);
+    } else if (m.id === 'bounty') {
+      ok = (G.bountyKills || 0) >= 1;
+    } else if (m.id === 'mythic') {
+      ok = G.units.some((u) => u.tier >= 6);
+    }
+    if (ok) {
+      G.missionsDone[m.id] = true;
+      G.gold += m.gold || 0;
+      G.gas += m.gas || 0;
+      Snd.play('gamble_win');
+      const rTxt = [m.gold ? `+${m.gold}G` : '', m.gas ? `+${m.gas}⛽` : ''].filter(Boolean).join(' ');
+      _uiHooks.toast(`🏅 전술 미션 달성 [${m.name}]! 보상: ${rTxt}`, 'good');
+    }
+  }
+}
+
+/**
+ * 유닛 타겟 우선순위 모드 순환 (상성·보스 우선 → 보스·고체력 우선 → 최단거리 우선)
+ */
+export function cycleUnitTargetMode(u) {
+  if (!u) return null;
+  const idx = TARGET_MODES.findIndex((m) => m.id === (u.targetMode || 'smart'));
+  const next = TARGET_MODES[(idx + 1) % TARGET_MODES.length];
+  u.targetMode = next.id;
+  Snd.play('click');
+  _uiHooks.toast(`${next.label} 타겟팅으로 전환 (${next.desc})`, 'good');
+  _uiHooks.refresh();
+  return next;
 }
 
 export function removeUnit(u) {
@@ -526,11 +587,13 @@ export function killEnemy(enemy) {
   spawnDebris(enemy.x, 0.5, enemy.z, enemy.isBoss || enemy.isBounty ? 18 : 6, enemy.isBoss ? 0xff2957 : 0xffd43b, 6);
 
   if (enemy.isBounty) {
+    G.bountyKills = (G.bountyKills || 0) + 1;
     Snd.play('gamble_win');
     _uiHooks.toast(
       `💰 현상금 보스 처치 성공! +${enemy.goldReward}G / +${enemy.gasReward} 가스 획득!`,
       'good'
     );
+    checkMissions();
   } else if (enemy.isBoss) {
     Snd.play('gamble_win');
     _uiHooks.banner(`🏆 WAVE ${G.wave} 보스 격파!`, 'good');
@@ -786,9 +849,17 @@ export function stepGame(dt) {
         const dz = e.z - u.z;
         const d2 = dx * dx + dz * dz;
         if (d2 > r2) continue;
-        // 보스/현상금 보스 우선 + 내 공격 성향 상성 유리한 적 우선 타겟팅
-        const sizePref = TYPES[u.type].vs[e.size] || 1;
-        const score = (e.isBoss ? 500 : e.isBounty ? 350 : 0) + sizePref * 100 - Math.sqrt(d2);
+        // 타겟 우선순위 모드(smart / boss / near)에 따른 점수 산정
+        let score = 0;
+        const mode = u.targetMode || 'smart';
+        if (mode === 'boss') {
+          score = (e.isBoss ? 2000 : e.isBounty ? 1400 : 0) + e.hp * 0.5 - Math.sqrt(d2);
+        } else if (mode === 'near') {
+          score = -Math.sqrt(d2) * 20 + (e.isBoss ? 80 : 0);
+        } else {
+          const sizePref = TYPES[u.type].vs[e.size] || 1;
+          score = (e.isBoss ? 500 : e.isBounty ? 350 : 0) + sizePref * 100 - Math.sqrt(d2);
+        }
         if (score > bestScore) {
           bestScore = score;
           bestTarget = e;
@@ -880,6 +951,8 @@ export function resetSession() {
   G.mineAcc = 0;
   G.bountyCd = 0;
   G.bountyCalls = 0;
+  G.bountyKills = 0;
+  G.missionsDone = {};
   G.ups = { striker: 0, destroyer: 0, arcane: 0 };
   G.kills = 0;
   G.primordialsThisRun = 0;

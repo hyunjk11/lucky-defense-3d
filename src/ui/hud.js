@@ -1,7 +1,7 @@
 /**
  * src/ui/hud.js — 상단 상태바(몬스터 100마리 게이지, 웨이브/상성 예고, 보스 바), 도박/강화 패널, 선택 유닛 상세 카드, 실시간 딜미터기 및 도감 모달
  */
-import { GAMBLES, RULES, upgradeCost, upgradeMultiplier } from '../data/config.js';
+import { GAMBLES, MISSIONS, RULES, TARGET_MODES, upgradeCost, upgradeMultiplier } from '../data/config.js';
 import { ALL_UNIT_LIST, TIERS, TYPE_KEYS, TYPES } from '../data/units.js';
 import { getBountySpec, getWaveSpec, SIZES } from '../data/waves.js';
 import { saveProgress } from '../core/progress.js';
@@ -12,6 +12,7 @@ import {
   awakenMythicUnit,
   combineAllAvailable,
   combineUnit,
+  cycleUnitTargetMode,
   exchangeGoldToGas,
   registerUiHooks,
   rerollPrimordialType,
@@ -168,6 +169,12 @@ export function refreshHud() {
     $('selUnitStats').textContent = `공격력 ${fmtNum(effDmg)} · 공속 ${sel.def.rate}/s · 추정 DPS ${fmtNum(dps)} · 누적딜 ${fmtNum(sel.totalDmg)}`;
     $('selUnitSkill').textContent = `★ [${sel.def.procName}] ${sel.def.procDesc}`;
 
+    const btnTarget = $('btnSelTarget');
+    if (btnTarget) {
+      const mInfo = TARGET_MODES.find((m) => m.id === (sel.targetMode || 'smart')) || TARGET_MODES[0];
+      btnTarget.textContent = `${mInfo.label} (R)`;
+    }
+
     const hasMate =
       sel.tier < 7 &&
       G.units.some((o) => o.uid !== sel.uid && o.type === sel.type && o.tier === sel.tier);
@@ -226,6 +233,22 @@ export function refreshHud() {
           })
           .join('')
       : '<div class="dps-empty">유닛을 소환(Q)해 전투를 시작하세요</div>';
+  }
+
+  // 9) 우측 전술 미션 보드 (6종)
+  const mList = $('missionList');
+  if (mList) {
+    const doneMap = G.missionsDone || {};
+    const doneCnt = MISSIONS.filter((m) => doneMap[m.id]).length;
+    if ($('missionCntBadge')) $('missionCntBadge').textContent = `${doneCnt}/${MISSIONS.length}`;
+    mList.innerHTML = MISSIONS.map((m) => {
+      const done = !!doneMap[m.id];
+      const rTxt = [m.gold ? `+${m.gold}G` : '', m.gas ? `+${m.gas}⛽` : ''].filter(Boolean).join(' ');
+      return `<div class="ms-row ${done ? 'done' : ''}" title="${m.desc}">
+        <span class="ms-name">${done ? '✓' : '○'} ${m.name}</span>
+        <b class="ms-rew">${done ? '완료' : rTxt}</b>
+      </div>`;
+    }).join('');
   }
 }
 
@@ -310,6 +333,13 @@ export function initHudEvents(callbacks) {
   }
 
   // 선택된 유닛 조작 카드 버튼
+  const btnTarget = $('btnSelTarget');
+  if (btnTarget) {
+    btnTarget.addEventListener('click', () => {
+      const sel = G.units.find((u) => u.uid === G.selectedUid);
+      if (sel) cycleUnitTargetMode(sel);
+    });
+  }
   $('btnSelCombine').addEventListener('click', () => {
     const sel = G.units.find((u) => u.uid === G.selectedUid);
     if (sel) combineUnit(sel);

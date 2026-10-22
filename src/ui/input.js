@@ -10,6 +10,7 @@ import {
   awakenMythicUnit,
   combineAllAvailable,
   combineUnit,
+  cycleUnitTargetMode,
   exchangeGoldToGas,
   moveOrSwapUnit,
   rerollPrimordialType,
@@ -184,6 +185,9 @@ export function initInput(callbacks) {
         break;
       case 'KeyC':
         if (sel) combineUnit(sel);
+        break;
+      case 'KeyR':
+        if (sel) cycleUnitTargetMode(sel);
         break;
       case 'KeyE':
       case 'Delete':

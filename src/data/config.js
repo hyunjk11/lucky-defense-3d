@@ -1,5 +1,5 @@
 /**
- * src/data/config.js — 게임 핵심 밸런스 상수, 보드/트랙 규격, 뽑기 확률 및 도박 테이블
+ * src/data/config.js — 게임 핵심 밸런스 상수, 보드/트랙 규격, 뽑기 확률, 도박 및 인게임 미션 테이블
  */
 
 export const BOARD = {
@@ -87,6 +87,22 @@ export const GAMBLES = {
     ],
   },
 };
+
+// 인게임 전술 미션 (달성 시 즉시 골드/가스 지급)
+export const MISSIONS = [
+  { id: 'trinity', name: '삼위일체 진형', desc: '3대 성향(⚡·💥·🔮) 동시 배치', gold: 60, gas: 25 },
+  { id: 'epic',    name: '에픽 돌파',     desc: '에픽(3등급) 이상 유닛 보유',     gold: 75, gas: 0 },
+  { id: 'unique',  name: '유니크 각성',   desc: '유니크(4등급) 이상 유닛 보유',   gold: 0,  gas: 55 },
+  { id: 'legend',  name: '전설의 탄생',   desc: '전설(5등급) 이상 유닛 보유',     gold: 120, gas: 60 },
+  { id: 'bounty',  name: '현상금 사냥꾼', desc: '현상금 미션 보스 처치',          gold: 100, gas: 45 },
+  { id: 'mythic',  name: '신화·태초 강림', desc: '신화(6) 또는 태초(7) 등급 달성', gold: 250, gas: 120 },
+];
+
+export const TARGET_MODES = [
+  { id: 'smart', label: '🎯 상성·보스 우선', desc: '내 성향에 약한 크기 및 보스를 우선 타격' },
+  { id: 'boss',  label: '👑 보스·고체력 우선', desc: '보스 및 체력이 가장 높은 적을 우선 타격' },
+  { id: 'near',  label: '📏 최단거리 우선', desc: '가장 가까이 접근한 적을 우선 타격' },
+];
 
 // 계열별 공격력 업그레이드 비용 및 배율
 export function upgradeCost(level) {

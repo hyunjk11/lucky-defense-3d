@@ -22,6 +22,8 @@ export const G = {
 
   bountyCd: 0,
   bountyCalls: 0,
+  bountyKills: 0,
+  missionsDone: {},
 
   // 계열별 업그레이드 레벨
   ups: {

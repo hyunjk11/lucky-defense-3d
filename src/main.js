@@ -6,6 +6,7 @@ import { $, setRngSeed } from './core/util.js';
 import { Snd } from './audio/audio.js';
 import { initRenderer, renderer, scene, camera, updateCamera, rotateCamera } from './render/scene.js';
 import { buildArena, updateArenaVisuals } from './render/arena3d.js';
+import { renderUnitPortrait } from './render/units3d.js';
 import { initVfx, updateVfx } from './render/vfx.js';
 import {
   createUnitOnTile,
@@ -142,6 +143,14 @@ function loop(now) {
 
   updateCamera(rawDt);
   renderer.render(scene, camera);
+
+  // 선택된 유닛이 있으면 하단 카드의 실시간 3D 회전 프리뷰 캔버스 렌더링
+  if (G.selectedUid) {
+    const sel = G.units.find((u) => u.uid === G.selectedUid);
+    if (sel) {
+      renderUnitPortrait($('unitPreviewCanvas'), sel.def, rawDt);
+    }
+  }
 }
 
 refreshHud();

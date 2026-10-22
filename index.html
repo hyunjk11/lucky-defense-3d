@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#0b0f1d">
   <title>운빨 디펜스 3D : 태초의 균열</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b132b'/%3E%3Cpolygon points='32,6 56,32 32,58 8,32' fill='%2300f5d4'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%23ffd43b'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     {
@@ -135,6 +136,11 @@
         <div id="dpsList"></div>
       </div>
 
+      <div id="missionPanel" class="panel">
+        <div class="p-title">🏅 전술 미션 <span id="missionCntBadge">0/6</span></div>
+        <div id="missionList" class="mission-list"></div>
+      </div>
+
       <div id="affinityCard" class="panel">
         <div class="p-title">공격 성향 × 크기 상성표</div>
         <div class="aff-row"><span style="color:#29e3ff">⚡ 속사·진동</span><b>🐾소형 150%</b></div>
@@ -147,6 +153,9 @@
     <footer id="bottomBar">
       <!-- 선택된 유닛 상세 및 컨트롤 -->
       <div id="unitDetailCard" class="panel hidden">
+        <div class="ud-portrait-wrap">
+          <canvas id="unitPreviewCanvas" width="96" height="96"></canvas>
+        </div>
         <div class="ud-left">
           <div class="ud-head">
             <span id="selTierBadge" class="tier-pill">일반</span>
@@ -157,6 +166,7 @@
           <div id="selUnitSkill" class="ud-skill"></div>
         </div>
         <div class="ud-actions">
+          <button id="btnSelTarget" class="ud-btn target" title="공격 타겟 우선순위 변경 (R)">🎯 상성·보스 (R)</button>
           <button id="btnSelCombine" class="ud-btn comb">✨ 조합 승급 (C)</button>
           <button id="btnSelSpecial" class="ud-btn special hidden">🌌 태초 각성 (T)</button>
           <button id="btnSelSell" class="ud-btn sell">판매 (E)</button>
